@@ -6,15 +6,18 @@ import json
 import re
 import subprocess
 import tempfile
+
+
+from airflow import DAG
+from airflow.utils.dates import datetime, timedelta
 from google.cloud import storage, bigquery
 from pathlib import Path
 
-from airflow import DAG
-from airflow.models import Variable
-
-from airflow.utils.dates import datetime, timedelta
 
 DATASET = "mkechinov/ecommerce-events-history-in-cosmetics-shop"
+CURRENT_PATH = os.path.dirname(os.path.abspath(__file__))
+SCHEMA_PATH = Path(CURRENT_PATH) / "schema.json"
+
 
 default_args = {
     "depends_on_past": False,
@@ -44,6 +47,11 @@ def store_file_in_gcs(local_path: Path, bucket_name: str = "ecommerce-events", d
     task_logger.info("File %s stored in GCS as %s", local_path.name, gcs_path)
     return gcs_path
 
+
+def load_bq_schema_from_json(path: Path = SCHEMA_PATH) -> list[bigquery.SchemaField]:
+    with open(path, 'r') as f:
+        schema_json = json.load(f)
+    return [bigquery.SchemaField(**field) for field in schema_json]
 
 
 with DAG(
@@ -101,78 +109,37 @@ with DAG(
     @task
     def ingest_file(gcp_path: str, dataset: str, table: str):
         task_logger.info("Ingesting file %s to BiqQuery dataset %s", gcp_path, dataset)
+        schema = load_bq_schema_from_json()
 
-        # Construct a BigQuery client object.
         client = bigquery.Client()
 
-        # TODO(developer): Set table_id to the ID of the table to create.
-        # table_id = "your-project.your_dataset.your_table_name
+        table_id = f"{dataset}.{table}"
 
-        # Set the encryption key to use for the destination.
-        # TODO: Replace this key with a key you have created in KMS.
-        # kms_key_name = "projects/{}/locations/{}/keyRings/{}/cryptoKeys/{}".format(
-        #     "cloud-samples-tests", "us", "test", "test"
-        # )
         job_config = bigquery.LoadJobConfig(
-            autodetect=True, source_format=bigquery.SourceFormat.NEWLINE_DELIMITED_JSON
+            schema=schema,
+            skip_leading_rows=1,
+            source_format=bigquery.SourceFormat.CSV,
+            write_disposition=bigquery.WriteDisposition.WRITE_TRUNCATE,
         )
         uri = "gs://cloud-samples-data/bigquery/us-states/us-states.json"
         load_job = client.load_table_from_uri(
-            uri, table_id, job_config=job_config
+            gcp_path, table_id, job_config=job_config
         )  # Make an API request.
         load_job.result()  # Waits for the job to complete.
-        destination_table = client.get_table(table_id)
-        print("Loaded {} rows.".format(destination_table.num_rows))
-
-
-        ####
-        # Retrieves the destination table and checks the length of the schema
-        table_id = "my_table"
-        table_ref = dataset_ref.table(table_id)
-        table = client.get_table(table_ref)
-        print("Table {} contains {} columns.".format(table_id, len(table.schema)))
-
-        # Configures the load job to append the data to the destination table,
-        # allowing field addition
-        job_config = bigquery.LoadJobConfig()
-        job_config.write_disposition = bigquery.WriteDisposition.WRITE_APPEND
-        job_config.schema_update_options = [
-            bigquery.SchemaUpdateOption.ALLOW_FIELD_ADDITION
-        ]
-        # In this example, the existing table contains only the 'full_name' column.
-        # 'REQUIRED' fields cannot be added to an existing schema, so the
-        # additional column must be 'NULLABLE'.
-        job_config.schema = [
-            bigquery.SchemaField("full_name", "STRING", mode="REQUIRED"),
-            bigquery.SchemaField("age", "INTEGER", mode="NULLABLE"),
-        ]
-        job_config.source_format = bigquery.SourceFormat.CSV
-        job_config.skip_leading_rows = 1
-
-        with open(filepath, "rb") as source_file:
-            job = client.load_table_from_file(
-                source_file,
-                table_ref,
-                location="US",  # Must match the destination dataset location.
-                job_config=job_config,
-            )  # API request
-
-        job.result()  # Waits for table load to complete.
         print(
-            "Loaded {} rows into {}:{}.".format(
-                job.output_rows, dataset_id, table_ref.table_id
+            "Loaded {} rows into {}.".format(
+                load_job.output_rows, table_id
             )
         )
+        destination_table = client.get_table(table_id)
+        destination_table.description = "Updated description"
+        client.update_table(destination_table, ["description"])
 
-        # Checks the updated length of the schema
-        table = client.get_table(table)
-        print("Table {} now contains {} columns.".format(table_id, len(table.schema)))
-        # https://cloud.google.com/bigquery/docs/samples/bigquery-add-column-load-append
 
     # dataset_files = list_dataset_files(DATASET)
     # check_gcp() >> store_dataset_file.partial(dataset=DATASET).expand(file=dataset_files)
 
-    ingest_file("gs://ecommerce-events/2019-10.csv.zip", "ecommerce_events", "source_events_load")
+    ingest_file("gs://ecommerce-events/2019-Oct.csv", "ecommerce_events", "source_events_load")
 
 
 if __name__ == "__main__":

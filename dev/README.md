@@ -14,7 +14,7 @@ The development environment is based on Docker Compose to streamline the use on 
     * Follow the instructions in [Docs](https://cloud.google.com/sdk/docs/install) to install the Google Cloud CLI.
     * Initialize and authenticate the gcloud CLI.
 
-      Select `friendly-plane-411611` project when prompted.
+      Select your target GCP project when prompted.
       ```
       gcloud init
       gcloud auth application-default login

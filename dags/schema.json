@@ -1,0 +1,56 @@
+[
+  {
+    "description": "Time when event happened at (in UTC).",
+    "mode": "REQUIRED",
+    "name": "event_time",
+    "field_type": "TIMESTAMP"
+  },
+  {
+    "description": "Type of an event (view, cart, remove_from_cart, purchase).",
+    "mode": "REQUIRED",
+    "name": "event_type",
+    "field_type": "STRING"
+  },
+  {
+    "description": "ID of a product",
+    "mode": "REQUIRED",
+    "name": "product_id",
+    "field_type": "INTEGER"
+  },
+  {
+    "description": "Product's category ID",
+    "mode": "REQUIRED",
+    "name": "category_id",
+    "field_type": "INTEGER"
+  },
+  {
+    "description": "Product's category taxonomy (code name) if it was possible to make it. Usually present for meaningful categories and skipped for different kinds of accessories.",
+    "mode": "NULLABLE",
+    "name": "category_code",
+    "field_type": "STRING"
+  },
+  {
+    "description": "Lowercase string of brand name. Can be missed.",
+    "mode": "NULLABLE",
+    "name": "brand",
+    "field_type": "STRING"
+  },
+  {
+    "description": "Float price of a product. Present.",
+    "mode": "REQUIRED",
+    "name": "price",
+    "field_type": "NUMERIC"
+  },
+  {
+    "description": "Permanent user ID.",
+    "mode": "REQUIRED",
+    "name": "user_id",
+    "field_type": "INTEGER"
+  },
+  {
+    "description": "Temporary user's session ID. Same for each user's session. Is changed every time user come back to online store from a long pause.",
+    "mode": "NULLABLE",
+    "name": "user_session",
+    "field_type": "STRING"
+  }
+]
