@@ -172,6 +172,8 @@ services:
       <<: *airflow-common-depends-on
       airflow-init:
         condition: service_completed_successfully
+    stdin_open: true # docker run -i
+    tty: true        # docker run -t
 
   airflow-triggerer:
     <<: *airflow-common

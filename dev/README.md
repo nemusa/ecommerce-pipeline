@@ -29,7 +29,7 @@ The development environment is based on Docker Compose to streamline the use on 
 
 Run a single DAG, for example the `extract_ecommerce_events`
 
-    docker compose -f dev/docker-compose.yaml  run airflow-worker airflow dags test extract_ecommerce_events
+    docker compose -f dev/docker-compose.yaml run airflow-worker airflow dags test extract_ecommerce_events
 
 Running any Airflow command, for example `info`
 
